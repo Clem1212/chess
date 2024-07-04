@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Socket.IO Chess Game</title>
+    <title>Chess Game</title>
     
     <style>
         body {
@@ -13,7 +13,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
+            background-color: #141313;
             position: relative;
         }
         .container {
@@ -22,6 +22,24 @@
             max-width: 500px;
             padding: 10px;
         }
+        input[type="text"], button {
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    margin: 5px;
+    background-color: #363636;
+    color: #ffffff;
+    
+  }
+  input[type="text"] {
+    width: 200px;
+   
+  }
+  button {
+    background-color: #a327d0;
+    cursor: pointer;
+  }
         #chessboard {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
@@ -29,7 +47,7 @@
             aspect-ratio: 1 / 1;
             width: 100%;
             max-width: 480px;
-            border: 2px solid #333;
+            border: 2px solid #ffffff;
             margin: 20px auto;
         }
         .cell {
@@ -85,12 +103,13 @@
                 font-size: 14px;
             }
         }
+        
     </style>
 </head>
 <body>
     <div class="container">
         <center> 
-            <div id="fullScreenBtn" onclick="toggleFullScreen()">
+            <div id="fullScreenBtn" onclick="toggleFullScreen()" style="color:white">
               &#x26F6; Full Screen
             </div>
             <script>
@@ -113,15 +132,15 @@
         }
             document.getElementById('fullScreenBtn').addEventListener('click', toggleFullScreen);
             </script>
-        <h1>Socket.IO Chess Game</h1>
+        <h1 style="color:white">Chess Game</h1>
         <div id="gameSetup">
             <button id="createRoom">Create Room</button>
             <input id="roomCodeInput" type="text" placeholder="Enter room code">
             <button id="joinRoom">Join Room</button>
         </div>
-        <p id="roomInfo"></p>
+        <p id="roomInfo" style="color:#ffffff"></p>
         <div id="chessboard"></div>
-        <p id="turnInfo"></p>
+        <p id="turnInfo" style="color:#ffffff"></p>
     </div>
 
 
