@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Chess Game</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            position: relative;
+        }
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 10px;
+        }
+        #chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            aspect-ratio: 1 / 1;
+            width: 100%;
+            max-width: 480px;
+            border: 2px solid #333;
+            margin: 20px auto;
+        }
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .white { background-color: #f0d9b5; }
+        .black { background-color: #b58863; }
+        .cell img {
+            width: 100%;
+            height: auto;
+            max-width: 50px;
+            max-height: 50px;
+        }
+        .selected {
+            background-color: #7fc97f !important;
+        }
+        #roomInfo {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        #createRoom, #joinRoom {
+            font-size: 14px;
+            padding: 5px 10px;
+            margin: 5px;
+        }
+        #roomCodeInput {
+            font-size: 14px;
+            padding: 5px;
+            width: 100px;
+        }
+        #turnInfo {
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 24px;
+            }
+            #createRoom, #joinRoom {
+                font-size: 12px;
+                padding: 4px 8px;
+            }
+            #roomCodeInput {
+                font-size: 12px;
+                padding: 4px;
+                width: 80px;
+            }
+            #roomInfo, #turnInfo {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <center> 
+            <div id="fullScreenBtn" onclick="toggleFullScreen()">
+              &#x26F6; Full Screen
+            </div>
+            <script>
+               // Function to toggle full screen mode
+        function toggleFullScreen() {
+          // Check if the screen size is smaller than 500px (mobile)
+          if (window.innerWidth <= 500) {
+            // Open a new page in full-screen mode
+            window.open("20.html", "_blank", "fullscreen=yes");
+          } else {
+            // Toggle full screen mode for the current document
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen();
+            } else {
+              if (document.exitFullscreen) {
+                document.exitFullscreen();
+              }
+            }
+          }
+        }
+            document.getElementById('fullScreenBtn').addEventListener('click', toggleFullScreen);
+            </script>
+        <h1>Socket.IO Chess Game</h1>
+        <div id="gameSetup">
+            <button id="createRoom">Create Room</button>
+            <input id="roomCodeInput" type="text" placeholder="Enter room code">
+            <button id="joinRoom">Join Room</button>
+        </div>
+        <p id="roomInfo"></p>
+        <div id="chessboard"></div>
+        <p id="turnInfo"></p>
+    </div>
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const createRoomBtn = document.getElementById('createRoom');
+        const joinRoomBtn = document.getElementById('joinRoom');
+        const roomCodeInput = document.getElementById('roomCodeInput');
+        const roomInfo = document.getElementById('roomInfo');
+        const chessboard = document.getElementById('chessboard');
+        const turnInfo = document.getElementById('turnInfo');
+        const gameSetup = document.getElementById('gameSetup');
+
+        let selectedCell = null;
+        let playerColor = null;
+        let currentTurn = 'white';
+        let roomCode = null;
+
+        createRoomBtn.addEventListener('click', () => {
+            socket.emit('createRoom');
+        });
+
+        joinRoomBtn.addEventListener('click', () => {
+            const code = roomCodeInput.value.trim().toUpperCase();
+            if (code) {
+                socket.emit('joinRoom', code);
+            }
+        });
+
+        socket.on('roomCreated', (code) => {
+            roomCode = code;
+            roomInfo.textContent = `Room created: ${code}`;
+            playerColor = 'white';
+            gameSetup.style.display = 'none';
+        });
+
+        socket.on('roomJoined', (code) => {
+            roomCode = code;
+            roomInfo.textContent = `Joined room: ${code}`;
+            playerColor = 'black';
+            gameSetup.style.display = 'none';
+        });
+
+        socket.on('roomError', (error) => {
+            alert(error);
+        });
+
+        socket.on('gameStart', (game) => {
+            renderChessboard(game.board);
+            updateTurnInfo();
+        });
+
+        function updateBoard(board) {
+            const cells = chessboard.querySelectorAll('.cell');
+            cells.forEach((cell) => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                cell.innerHTML = '';
+                if (board[row][col]) {
+                    const img = document.createElement('img');
+                    img.src = getPieceImage(board[row][col]);
+                    cell.appendChild(img);
+                }
+            });
+        }
+
+        socket.on('moveMade', ({ game, move }) => {
+            updateBoard(game.board);
+            currentTurn = game.turn;
+            updateTurnInfo();
+        });
+
+        function renderChessboard(board) {
+    chessboard.innerHTML = '';
+    const cellSize = chessboard.clientWidth / 8;
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell', (i + j) % 2 === 0 ? 'white' : 'black');
+            cell.dataset.row = i;
+            cell.dataset.col = j;
+            cell.style.width = `${cellSize}px`;
+            cell.style.height = `${cellSize}px`;
+            if (board[i][j]) {
+                const img = document.createElement('img');
+                img.src = getPieceImage(board[i][j]);
+                cell.appendChild(img);
+            }
+            cell.addEventListener('click', handleCellClick);
+            chessboard.appendChild(cell);
+        }
+    }
+}
+window.addEventListener('resize', () => {
+    if (roomCode) {
+        renderChessboard(rooms.get(roomCode).game.board);
+    }
+});
+
+        function getPieceImage(piece) {
+            const color = piece.toLowerCase() === piece ? 'b' : 'w';
+            const pieceType = piece.toLowerCase();
+            return `https://upload.wikimedia.org/wikipedia/commons/thumb/${getPieceImagePath(color, pieceType)}`;
+        }
+
+        function getPieceImagePath(color, pieceType) {
+            const paths = {
+                'w': {
+                    'p': '4/45/Chess_plt45.svg/45px-Chess_plt45.svg.png',
+                    'r': '7/72/Chess_rlt45.svg/45px-Chess_rlt45.svg.png',
+                    'n': '7/70/Chess_nlt45.svg/45px-Chess_nlt45.svg.png',
+                    'b': 'b/b1/Chess_blt45.svg/45px-Chess_blt45.svg.png',
+                    'q': '1/15/Chess_qlt45.svg/45px-Chess_qlt45.svg.png',
+                    'k': '4/42/Chess_klt45.svg/45px-Chess_klt45.svg.png'
+                },
+                'b': {
+                    'p': 'c/c7/Chess_pdt45.svg/45px-Chess_pdt45.svg.png',
+                    'r': 'f/ff/Chess_rdt45.svg/45px-Chess_rdt45.svg.png',
+                    'n': 'e/ef/Chess_ndt45.svg/45px-Chess_ndt45.svg.png',
+                    'b': '9/98/Chess_bdt45.svg/45px-Chess_bdt45.svg.png',
+                    'q': '4/47/Chess_qdt45.svg/45px-Chess_qdt45.svg.png',
+                    'k': 'f/f0/Chess_kdt45.svg/45px-Chess_kdt45.svg.png'
+                }
+            };
+            return paths[color][pieceType];
+        }
+
+        function handleCellClick(event) {
+            const cell = event.currentTarget;
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            if (currentTurn !== playerColor) {
+                alert("It's not your turn!");
+                return;
+            }
+
+            if (selectedCell) {
+                const fromRow = parseInt(selectedCell.dataset.row);
+                const fromCol = parseInt(selectedCell.dataset.col);
+
+                // Move the piece locally
+                const pieceImg = selectedCell.querySelector('img');
+                if (pieceImg) {
+                    cell.innerHTML = '';
+                    cell.appendChild(pieceImg);
+                    selectedCell.innerHTML = '';
+                }
+
+                socket.emit('makeMove', { roomCode, move: { from: [fromRow, fromCol], to: [row, col] } });
+                selectedCell.classList.remove('selected');
+                selectedCell = null;
+
+                // Switch turns locally
+                currentTurn = currentTurn === 'white' ? 'black' : 'white';
+                updateTurnInfo();
+            } else {
+                if (cell.firstChild && cell.firstChild.src.includes(playerColor === 'white' ? 'w' : 'b')) {
+                    cell.classList.add('selected');
+                    selectedCell = cell;
+                }
+            }
+        }
+
+        function updateTurnInfo() {
+            turnInfo.textContent = `Current turn: ${currentTurn.charAt(0).toUpperCase() + currentTurn.slice(1)}`;
+            if (currentTurn === playerColor) {
+                turnInfo.textContent += " (Your turn)";
+            }
+        }
+    </script>
+</body>
+</html>
